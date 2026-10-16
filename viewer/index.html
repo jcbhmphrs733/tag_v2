@@ -40,6 +40,17 @@
   .tab i { display:inline-block; width:9px; height:9px; border-radius:50%; background:#555; margin-right:4px; }
   #controls { bottom:12px; left:50%; transform:translateX(-50%); width:min(760px, calc(100vw - 24px)); padding:8px 12px; display:none; gap:10px; align-items:center; }
   #scrub { flex:1; accent-color:var(--accent); } #time { font-variant-numeric:tabular-nums; min-width:96px; text-align:right; color:var(--dim); font-size:12.5px; }
+  #data { top:12px; left:12px; width:236px; padding:10px 12px; display:none; font-variant-numeric:tabular-nums; }
+  #data .h { font-size:11px; letter-spacing:1.4px; color:var(--dim); text-transform:uppercase; margin-bottom:6px; }
+  #data .ag { border-left:5px solid #888; padding:2px 0 2px 9px; margin-bottom:8px; }
+  #data .nm { font-weight:700; font-size:14px; } #data .nm small { color:var(--dim); font-weight:600; font-size:11px; margin-left:4px; text-transform:uppercase; letter-spacing:1px; }
+  #data .kv { display:grid; grid-template-columns:auto 1fr; gap:1px 10px; font:12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; margin-top:3px; }
+  #data .kv span:nth-child(odd) { color:var(--dim); } #data .kv span:nth-child(even) { text-align:right; }
+  #data .dist { border-top:1px solid var(--line); padding-top:8px; }
+  #data .dist b { font-size:24px; font-weight:800; } #data .dist small { color:var(--dim); font-size:11.5px; margin-left:6px; }
+  #data .bar { height:6px; border-radius:4px; background:#2a2e45; margin-top:6px; position:relative; overflow:hidden; }
+  #data .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--accent); }
+  #data .legend { color:var(--dim); font-size:11px; margin-top:7px; line-height:1.35; }
   #banner { position:fixed; z-index:3; top:16%; left:50%; transform:translateX(-50%); text-align:center; pointer-events:none;
             font-size:clamp(24px,4.4vw,46px); font-weight:900; text-shadow:0 3px 18px #000; opacity:0; transition:opacity .25s; }
   #banner.show { opacity:1; } #banner small { display:block; font-size:.4em; font-weight:600; letter-spacing:2px; color:#dde; }
@@ -47,7 +58,7 @@
               background:rgba(20,22,31,.82); border:4px dashed var(--accent); margin:10px; border-radius:18px; pointer-events:none; }
   body.dragging #drophint { display:flex; }
   #note { position:fixed; z-index:2; bottom:64px; right:14px; font-size:11.5px; color:var(--dim); max-width:300px; text-align:right; }
-  @media (max-width: 820px) { #setup { width:calc(100vw - 24px); max-height:55vh; } #hud { top:auto; bottom:64px; right:12px; left:12px; } }
+  @media (max-width: 820px) { #data { width:190px; padding:8px 10px; } #setup { width:calc(100vw - 24px); max-height:55vh; } #hud { top:auto; bottom:64px; right:12px; left:12px; } }
 </style>
 </head>
 <body>
@@ -81,8 +92,15 @@
   <select id="speed" style="background:#2a2e45;color:#eceef5;border:1px solid #474c6b;border-radius:8px;padding:6px">
     <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
   <label id="sensewrap" hidden title="Light up the cells each agent can read through its block sensors"><input type="checkbox" id="senses" checked> show sensed cells</label>
+  <label id="datawrap" title="Show the numbers behind the simulation"><input type="checkbox" id="datatoggle" checked> data</label>
   <div id="time"></div>
 </div>
+<aside id="data" class="panel">
+  <div class="h">Live data</div>
+  <div id="data-agents"></div>
+  <div class="dist"><b id="d-dist">-</b><small id="d-note"></small><div class="bar"><i id="d-bar"></i></div></div>
+  <div class="legend">Positions in arena cells (x right, y down). Heading in degrees: 0 = right, 90 = down. Distance is centre to centre.</div>
+</aside>
 <div id="banner"></div>
 <div id="drophint">Drop agent files anywhere</div>
 <div id="note"></div>
@@ -182,6 +200,7 @@ function selectMatch(i) {
   state.match = i; state.t = 0; state.holdUntil = 0; state.playing = true; state.finished = false;
   $("banner").classList.remove("show"); $("play").textContent = "Pause";
   view.show(state.series.matches[i].replay);
+  buildData(state.series.matches[i].replay);
   renderHud();
 }
 function renderHud() {
@@ -220,6 +239,29 @@ function agentAt(rep, idx, f) {                                    // interpolat
   const a = rep.agents[idx], i = Math.min(Math.floor(f), rep.frames - 1), j = Math.min(i + 1, rep.frames - 1), k = f - i;
   let dh = a.heading[j] - a.heading[i]; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI));
   return { x: a.x[i] + (a.x[j] - a.x[i]) * k, y: a.y[i] + (a.y[j] - a.y[i]) * k, h: a.heading[i] + dh * k };
+}
+const dataUI = { rows: [] };
+function buildData(rep) {                                         // one block per agent, built once per series
+  $("data-agents").innerHTML = ""; dataUI.rows = rep.agents.map(a => {
+    const box = document.createElement("div"); box.className = "ag"; box.style.borderLeftColor = a.color;
+    box.innerHTML = '<div class="nm"></div><div class="kv"><span>x, y</span><span></span><span>cell</span><span></span><span>heading</span><span></span><span>speed</span><span></span></div>';
+    box.querySelector(".nm").textContent = a.name; const role = document.createElement("small"); role.textContent = a.role; box.querySelector(".nm").appendChild(role);
+    $("data-agents").appendChild(box); const v = box.querySelectorAll(".kv span:nth-child(even)"); return { xy: v[0], cell: v[1], head: v[2], speed: v[3] };
+  });
+}
+function updateData(rep, f) {
+  const on = $("datatoggle").checked; $("data").style.display = on ? "block" : "none"; if (!on) return;
+  const ps = rep.agents.map((_, i) => agentAt(rep, i, f)), g = Math.max(0, f - 1), span = (f - g) * rep.dt;
+  rep.agents.forEach((_, i) => {
+    const p = ps[i], q = agentAt(rep, i, g), u = dataUI.rows[i]; if (!u) return;
+    const deg = ((p.h * 180 / Math.PI) % 360 + 360) % 360, sp = span > 0 ? Math.hypot(p.x - q.x, p.y - q.y) / span : 0;
+    u.xy.textContent = p.x.toFixed(2) + ", " + p.y.toFixed(2); u.cell.textContent = Math.floor(p.x) + ", " + Math.floor(p.y);
+    u.head.textContent = deg.toFixed(0) + "°"; u.speed.textContent = sp.toFixed(1) + " /s";
+  });
+  const d = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y), el = $("d-dist");
+  el.textContent = d.toFixed(2); el.style.color = d <= rep.tag_radius ? "var(--bad)" : d < 3 ? "var(--accent)" : "";
+  $("d-note").textContent = "apart · tag at " + rep.tag_radius.toFixed(2);
+  $("d-bar").style.width = Math.min(100, 100 * d / 30) + "%";
 }
 function sensedFor(i) {                                           // block cells agent i reads, or null when this series carries none
   const s = state.series && state.series.senses; return s && s[i] && s[i].length ? s[i] : null;
@@ -383,7 +425,7 @@ function frame(now) {
       if (state.t < len) { state.t = Math.min(len, state.t + dt * state.speed); if (state.t >= len) finishMatch(); }
       else if (state.holdUntil && now >= state.holdUntil && state.match < state.series.matches.length - 1) { selectMatch(state.match + 1); }
     }
-    view.render(Math.min(m.replay.frames - 1, state.t / m.replay.dt));
+    const fr = Math.min(m.replay.frames - 1, state.t / m.replay.dt); view.render(fr); updateData(m.replay, fr);
     $("scrub").value = len ? Math.round(1000 * state.t / len) : 0;
     $("time").textContent = `${state.t.toFixed(1)} / ${len.toFixed(1)} s`;
   }
@@ -397,7 +439,7 @@ $("scrub").oninput = e => {
   state.t = matchLength() * e.target.value / 1000; state.playing = false; $("play").textContent = "Play"; $("banner").classList.remove("show"); state.holdUntil = 0;
   if (e.target.value >= 1000) { finishMatch(); state.holdUntil = 0; }
 };
-$("again").onclick = () => { $("hud").style.display = $("controls").style.display = "none"; $("setup").style.display = "block"; $("banner").classList.remove("show"); state.series = null; renderSlots(); };
+$("again").onclick = () => { $("data").style.display = "none"; $("hud").style.display = $("controls").style.display = "none"; $("setup").style.display = "block"; $("banner").classList.remove("show"); state.series = null; renderSlots(); };
 $("run").onclick = runSeries;
 $("pick").onclick = () => $("file").click();
 $("file").onchange = async e => { await handleFiles(e.target.files); e.target.value = ""; };

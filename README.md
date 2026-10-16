@@ -24,7 +24,7 @@ python server.py            # then open http://127.0.0.1:8000
 | `trainer.py` | Starter genetic algorithm | **yes, or replace it** |
 | `seed_network.py`, `starters/` | Starter weights (steering skill only) | yes |
 | `wanderers.py` | Random-walk sparring partner for training | yes |
-| `baselines/` | Example agents to practise against (made by `dev/make_baselines.py`) | |
+| `baselines/` | Example agents to practise against (made by `dev/make_baselines.py`). The `_diamond` pair senses a diamond outline (9 of the 13 block cells) instead of the full checkerboard. | |
 | `dev/make_baselines.py` | Organizer tool that rebuilds the baselines | organizers |
 | `examples/` | Tiny agent files showing the format | |
 | `arenas/` | Sample arenas | |

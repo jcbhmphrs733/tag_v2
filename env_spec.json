@@ -26,7 +26,7 @@
  },
  "roles": {
   "chaser": {
-   "max_speed": 3.3,
+   "max_speed": 3.2,
    "turn_rate": 3.0
   },
   "evader": {
@@ -35,7 +35,7 @@
   }
  },
  "terrain": {
-  "mud_speed_multiplier": 0.5,
+  "mud_speed_multiplier": 0.75,
   "mud_affects_turning": false
  },
  "tag": {

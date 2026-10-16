@@ -47,3 +47,6 @@ The trainer, wanderers, starters, and baselines are conveniences, and none of th
 ## What to hand out
 Everything except the `dev/` folder (tests and the baseline-rebuild tool) is what participants need. You may delete `dev/` from the copy you
 distribute, or leave it in; nothing in the participant workflow depends on it. Keep it yourself to re-run the checks and rebuild baselines.
+
+## Diamond baselines
+`baselines/baseline_chaser_diamond.json` and `baseline_evader_diamond.json` (names "Baseline Chaser Diamond" / "Baseline Evader Diamond") read 17 inputs: the centre block cell and the 8 cells exactly two steps away, instead of all 13 checkerboard cells. The locked catalog has no cells at (+-1,0) or (0,+-1), so a full 13-cell diamond would need a contract change and an env_version bump. Rebuild with `python dev/make_baselines.py chaser 8000 4 --diamond --write` (about 4 minutes each).

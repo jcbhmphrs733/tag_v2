@@ -53,7 +53,7 @@ python validate_agent.py training_out/my_chaser.json     # must end with: PASS: 
 python server.py                                         # then open the address it prints in your browser
 ```
 
-In the page, drop in your file (and a file of the other role), then run the best-of-five. During a face-off, the **show sensed cells** checkbox tints the cells each agent's network is reading (its block inputs), so you can see what it can and cannot see. You can also try the baselines to see two
+In the page, drop in your file (and a file of the other role), then run the best-of-five. During a face-off, the **show sensed cells** checkbox tints the cells each agent's network is reading (its block inputs), so you can see what it can and cannot see. The **data** panel on the left shows each agent's live position, heading and speed, and the distance between them. You can also try the baselines to see two
 example agents play.
 
 - The trainer saves your agent in `training_out/`, named after the agent (`My Chaser` becomes `my_chaser.json`; the end of the run
